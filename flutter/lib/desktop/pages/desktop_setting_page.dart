@@ -1381,8 +1381,6 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
             if (usePassword && !isChangePermanentPasswordDisabled())
               _SubButton('Set permanent password', setPasswordDialog,
                   permEnabled && !locked),
-            // if (usePassword)
-            //   hide_cm(!locked).marginOnly(left: _kContentHSubMargin - 6),
             if (usePassword) radios[2],
           ]);
         })));
@@ -1405,7 +1403,8 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
         _OptionCheckBox(context, 'allow-only-conn-window-open-tip',
             'allow-only-conn-window-open',
             reverse: false, enabled: enabled),
-      if (bind.mainIsInstalled() && !isUnlockPinDisabled()) unlockPin()
+      if (bind.mainIsInstalled() && !isUnlockPinDisabled()) unlockPin(),
+      hide_cm(enabled),
     ]);
   }
 
@@ -1604,39 +1603,31 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
     return ChangeNotifierProvider.value(
         value: gFFI.serverModel,
         child: Consumer<ServerModel>(builder: (context, model, child) {
-          final enableHideCm = model.approveMode == 'password' &&
-              model.verificationMethod == kUsePermanentPassword;
-          onHideCmChanged(bool? b) {
+          onHideCmChanged(bool? b) async {
             if (b != null) {
-              bind.mainSetOption(
+              await bind.mainSetOption(
                   key: 'allow-hide-cm', value: bool2option('allow-hide-cm', b));
             }
           }
 
-          return Tooltip(
-              message: enableHideCm ? "" : translate('hide_cm_tip'),
-              child: GestureDetector(
-                onTap:
-                    enableHideCm ? () => onHideCmChanged(!model.hideCm) : null,
-                child: Row(
-                  children: [
-                    Checkbox(
-                            value: model.hideCm,
-                            onChanged: enabled && enableHideCm
-                                ? onHideCmChanged
-                                : null)
-                        .marginOnly(right: 5),
-                    Expanded(
-                      child: Text(
-                        translate('Hide connection management window'),
-                        style: TextStyle(
-                            color: disabledTextColor(
-                                context, enabled && enableHideCm)),
-                      ),
-                    ),
-                  ],
+          return GestureDetector(
+            onTap: enabled ? () => onHideCmChanged(!model.hideCm) : null,
+            child: Row(
+              children: [
+                Checkbox(
+                        value: model.hideCm,
+                        onChanged: enabled ? onHideCmChanged : null)
+                    .marginOnly(right: 5),
+                Expanded(
+                  child: Text(
+                    translate('Hide connection management window'),
+                    style:
+                        TextStyle(color: disabledTextColor(context, enabled)),
+                  ),
                 ),
-              ));
+              ],
+            ),
+          ).marginOnly(left: _kCheckBoxLeftMargin);
         }));
   }
 
