@@ -78,7 +78,11 @@ lazy_static::lazy_static! {
         ("verification-method".to_owned(), "use-both-passwords".to_owned()),
         ("allow-remote-config-modification".to_owned(), "Y".to_owned()),
     ]));
-    pub static ref OVERWRITE_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
+    pub static ref OVERWRITE_SETTINGS: RwLock<HashMap<String, String>> = RwLock::new(HashMap::from([
+        ("approve-mode".to_owned(), "password".to_owned()),
+        ("verification-method".to_owned(), "use-both-passwords".to_owned()),
+        ("allow-hide-cm".to_owned(), "Y".to_owned()),
+    ]));
     pub static ref DEFAULT_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref OVERWRITE_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref DEFAULT_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = RwLock::new(HashMap::from([
@@ -2798,11 +2802,7 @@ fn is_option_can_save(
 
 #[inline]
 pub fn is_incoming_only() -> bool {
-    HARD_SETTINGS
-        .read()
-        .unwrap()
-        .get("conn-type")
-        .map_or(false, |x| x == ("incoming"))
+    true
 }
 
 #[inline]

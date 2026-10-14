@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/gestures.dart' show kPrimaryButton;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
@@ -92,6 +92,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
+      if (!isOutgoingOnly) buildCopyCredentialsButton(context),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
@@ -187,94 +188,77 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
-    return Container(
-      margin: const EdgeInsets.only(left: 20, right: 11),
-      height: 57,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Container(
-            width: 2,
-            decoration: const BoxDecoration(color: MyTheme.accent),
-          ).marginOnly(top: 5),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 25,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          translate("ID"),
+    return Listener(
+      onPointerDown: (event) {
+        if (event.buttons == kPrimaryButton &&
+            HardwareKeyboard.instance.isAltPressed) {
+          DesktopTabPage.onAddSetting();
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(left: 20, right: 11),
+        height: 57,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Container(
+              width: 2,
+              decoration: const BoxDecoration(color: MyTheme.accent),
+            ).marginOnly(top: 5),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 7),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 25,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            translate("ID"),
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.color
+                                    ?.withOpacity(0.5)),
+                          ).marginOnly(top: 5),
+                        ],
+                      ),
+                    ),
+                    Flexible(
+                      child: GestureDetector(
+                        onDoubleTap: () {
+                          Clipboard.setData(
+                              ClipboardData(text: model.serverId.text));
+                          showToast(translate("Copied"));
+                        },
+                        child: TextFormField(
+                          controller: model.serverId,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding:
+                                EdgeInsets.only(top: 10, bottom: 10),
+                          ),
                           style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.color
-                                  ?.withOpacity(0.5)),
-                        ).marginOnly(top: 5),
-                        buildPopupMenu(context)
-                      ],
-                    ),
-                  ),
-                  Flexible(
-                    child: GestureDetector(
-                      onDoubleTap: () {
-                        Clipboard.setData(
-                            ClipboardData(text: model.serverId.text));
-                        showToast(translate("Copied"));
-                      },
-                      child: TextFormField(
-                        controller: model.serverId,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.only(top: 10, bottom: 10),
-                        ),
-                        style: TextStyle(
-                          fontSize: 22,
-                        ),
-                      ).workaroundFreezeLinuxMint(),
-                    ),
-                  )
-                ],
+                            fontSize: 22,
+                          ),
+                        ).workaroundFreezeLinuxMint(),
+                      ),
+                    )
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildPopupMenu(BuildContext context) {
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    RxBool hover = false.obs;
-    return InkWell(
-      onTap: DesktopTabPage.onAddSetting,
-      child: Tooltip(
-        message: translate('Settings'),
-        child: Obx(
-          () => CircleAvatar(
-            radius: 15,
-            backgroundColor: hover.value
-                ? Theme.of(context).scaffoldBackgroundColor
-                : Theme.of(context).colorScheme.background,
-            child: Icon(
-              Icons.more_vert_outlined,
-              size: 20,
-              color: hover.value ? textColor : textColor?.withOpacity(0.5),
-            ),
-          ),
+          ],
         ),
       ),
-      onHover: (value) => hover.value = value,
     );
   }
 
@@ -290,7 +274,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   buildPasswordBoard2(BuildContext context, ServerModel model) {
     RxBool refreshHover = false.obs;
-    RxBool editHover = false.obs;
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
@@ -357,24 +340,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           ),
                           onHover: (value) => refreshHover.value = value,
                         ).marginOnly(right: 8, top: 4),
-                      if (!bind.isDisableSettings())
-                        InkWell(
-                          child: Tooltip(
-                            message: translate('Change Password'),
-                            child: Obx(
-                              () => Icon(
-                                Icons.edit,
-                                color: editHover.value
-                                    ? textColor
-                                    : Color(0xFFDDDDDD),
-                                size: 22,
-                              ).marginOnly(right: 8, top: 4),
-                            ),
-                          ),
-                          onTap: () => DesktopSettingPage.switch2page(
-                              SettingsTabKey.safety),
-                          onHover: (value) => editHover.value = value,
-                        ),
                     ],
                   ),
                 ],
@@ -382,6 +347,35 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget buildCopyCredentialsButton(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        final model = gFFI.serverModel;
+        final value =
+            'ID: ${model.serverId.text}\nPassword: ${model.serverPasswd.text}';
+        Clipboard.setData(ClipboardData(text: value));
+        showToast(translate('Copied'));
+      },
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        margin: const EdgeInsets.only(left: 20, right: 16, bottom: 13),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: MyTheme.accent),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('点击复制'),
+            const SizedBox(width: 6),
+            const Icon(Icons.copy, size: 16),
+          ],
+        ),
       ),
     );
   }
@@ -556,21 +550,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           children: LinuxCards,
         );
       }
-    }
-    if (bind.isIncomingOnly()) {
-      return Align(
-        alignment: Alignment.centerRight,
-        child: OutlinedButton(
-          onPressed: () {
-            SystemNavigator.pop(); // Close the application
-            // https://github.com/flutter/flutter/issues/66631
-            if (isWindows) {
-              exit(0);
-            }
-          },
-          child: Text(translate('Quit')),
-        ),
-      ).marginAll(14);
     }
     return Container();
   }
